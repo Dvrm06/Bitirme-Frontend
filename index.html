@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Hyperledger Fabric Asset Management Dashboard">
+    <title>Fabric Asset Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">⛓️</div>
+                <h1>Fabric Asset Manager</h1>
+            </div>
+            <div class="connection-status">
+                <span class="status-indicator" id="status-indicator"></span>
+                <span id="connection-text">Checking...</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Action Bar -->
+        <div class="action-bar">
+            <div class="action-buttons">
+                <button class="btn btn-primary" id="btn-create">
+                    <span class="btn-icon">+</span>
+                    Create Asset
+                </button>
+                <button class="btn btn-secondary" id="btn-init">
+                    <span class="btn-icon">⚡</span>
+                    Init Ledger
+                </button>
+                <button class="btn btn-secondary" id="btn-refresh">
+                    <span class="btn-icon">↻</span>
+                    Refresh
+                </button>
+            </div>
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="Search by ID or Owner...">
+            </div>
+        </div>
+
+        <!-- Asset Grid -->
+        <div class="assets-container">
+            <div class="assets-header">
+                <h2>Assets on Ledger</h2>
+                <span class="asset-count" id="asset-count">0 assets</span>
+            </div>
+            <div class="assets-grid" id="assets-grid">
+                <!-- Assets will be loaded here -->
+                <div class="loading-state">
+                    <div class="spinner"></div>
+                    <p>Loading assets...</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Create/Edit Modal -->
+    <div class="modal-overlay" id="asset-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modal-title">Create New Asset</h3>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <form id="asset-form">
+                <div class="form-group">
+                    <label for="asset-id">Asset ID</label>
+                    <input type="text" id="asset-id" name="id" required placeholder="e.g., asset4">
+                </div>
+                <div class="form-group">
+                    <label for="asset-color">Color</label>
+                    <div class="color-input-group">
+                        <input type="text" id="asset-color" name="color" required placeholder="e.g., purple">
+                        <div class="color-preview" id="color-preview"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="asset-owner">Owner</label>
+                    <input type="text" id="asset-owner" name="owner" required placeholder="e.g., Alice">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-ghost" id="btn-cancel">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="btn-submit">Create Asset</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Transfer Modal -->
+    <div class="modal-overlay" id="transfer-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Transfer Ownership</h3>
+                <button class="modal-close" id="transfer-close">&times;</button>
+            </div>
+            <form id="transfer-form">
+                <div class="form-group">
+                    <label>Asset ID</label>
+                    <input type="text" id="transfer-asset-id" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="transfer-owner">New Owner</label>
+                    <input type="text" id="transfer-owner" name="newOwner" required placeholder="Enter new owner name">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-ghost" id="transfer-cancel">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Transfer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div class="modal-overlay" id="history-modal">
+        <div class="modal modal-wide">
+            <div class="modal-header">
+                <h3>Asset History</h3>
+                <button class="modal-close" id="history-close">&times;</button>
+            </div>
+            <div class="history-content" id="history-content">
+                <!-- History will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal-overlay" id="delete-modal">
+        <div class="modal modal-small">
+            <div class="modal-header">
+                <h3>Confirm Delete</h3>
+                <button class="modal-close" id="delete-close">&times;</button>
+            </div>
+            <div class="delete-content">
+                <p>Are you sure you want to delete asset <strong id="delete-asset-id"></strong>?</p>
+                <p class="warning-text">This action cannot be undone.</p>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-ghost" id="delete-cancel">Cancel</button>
+                <button type="button" class="btn btn-danger" id="btn-confirm-delete">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
