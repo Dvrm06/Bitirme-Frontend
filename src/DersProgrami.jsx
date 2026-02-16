@@ -1,66 +1,57 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom'; // EKSİK OLAN IMPORT EKLENDİ
+import { useNavigate } from 'react-router-dom';
 import './App.css';
 
 // --- SABİT VERİLER VE AYARLAR ---
 const GUNLER = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
 const SAATLER = ["09.00-10.00", "10.00-11.00", "11.00-12.00", "12.00-13.00", "13.00-14.00", "14.00-15.00", "15.00-16.00", "16.00-17.00"];
-const OGLE_ARASI_HARITASI = [-1, 3, 3, 3, 3, 4, -1, -1];
 
 const BASLANGIC_STOKLARI = {
-    "mat": 6, "fiz": 4, "kim": 4, "biyo": 4, "ing": 4, "edb": 5,
-    "alm": 3, "beden": 2, "tarih": 2, "resim": 1
+    "mat": 4, "fiz": 3, "ing": 2, "edb": 3, "tarih": 2, "resim": 2,
 };
 
 const DERS_TANIMLARI = {
     "edb": { ad: "Edebiyat", renk: "#e74c3c", blok: true },
     "mat": { ad: "Matematik", renk: "#e74c3c", blok: true },
     "fiz": { ad: "Fizik", renk: "#e74c3c", blok: true },
-    "kim": { ad: "Kimya", renk: "#e74c3c", blok: true },
-    "biyo": { ad: "Biyoloji", renk: "#e74c3c", blok: true },
     "ing": { ad: "İngilizce", renk: "#e74c3c", blok: true },
-    "alm": { ad: "Almanca", renk: "#e74c3c", blok: true },
-    "beden": { ad: "Beden E.", renk: "#e2007a", blok: true },
-    "tarih": { ad: "Tarih", renk: "#8e44ad", blok: false },
+    "tarih": { ad: "Tarih", renk: "#e74c3c", blok: true },
     "resim": { ad: "Resim", renk: "#8e44ad", blok: false },
 };
 
 const DERS_KURALLARI = {
-    "mat": { blok: true, gunlukMax: 2, maxGunSayisi: 3 },
-    "fiz": { blok: true, gunlukMax: 2, maxGunSayisi: 2 },
-    "kim": { blok: true, gunlukMax: 2, maxGunSayisi: 2 },
-    "biyo": { blok: true, gunlukMax: 2, maxGunSayisi: 2 },
-    "ing": { blok: true, gunlukMax: 2, maxGunSayisi: 2 },
-    "edb": { blok: true, gunlukMax: 2, maxGunSayisi: 4 },
-    "alm": { blok: true, gunlukMax: 2, maxGunSayisi: 2 },
-    "beden": { blok: true, gunlukMax: 2, maxGunSayisi: 1, izinliZamanlar: { 4: [5, 6, 7] } },
-    "tarih": { blok: false, gunlukMax: 1 },
-    "resim": { blok: false }
+    "mat": { blok: true, gunlukMax: 2, izinliZamanlar: { 1: [1, 0], 2: [4, 5] } },
+    "fiz": { blok: true, gunlukMax: 2, izinliZamanlar: { 1: [2], 3: [1, 0] } },
+    "ing": { blok: true, gunlukMax: 2, izinliZamanlar: { 3: [5, 4] } },
+    "edb": { blok: true, gunlukMax: 3, izinliZamanlar: { 1: [4, 5, 6] } },
+    "tarih": { blok: true, gunlukMax: 2, izinliZamanlar: { 2: [1, 2] } },
+    "resim": { blok: false, gunlukMax: 2, izinliZamanlar: { 2: [0], 3: [2, 6] } }
 };
 
 function DersProgrami() {
-    // --- STATE (DURUM) YÖNETİMİ ---
-    // HATA BURADAYDI: useState ve useEffect FONKSİYONUN İÇİNE TAŞINDI
     const [kullaniciAdi, setKullaniciAdi] = useState('');
     const navigate = useNavigate();
-
     const [stoklar, setStoklar] = useState(BASLANGIC_STOKLARI);
     const [yerlesim, setYerlesim] = useState({});
+
+    // STATE'LER
+    const [seciliDersId, setSeciliDersId] = useState(null);
+    const [secilenZaman, setSecilenZaman] = useState(null);
+
     const dosyaInputRef = useRef(null);
 
-    // Kullanıcı Kontrolü (Login olmuş mu?)
+    // Kullanıcı Kontrolü
     useEffect(() => {
         const kayitliKullanici = localStorage.getItem('user');
-
         if (kayitliKullanici) {
             const userObj = JSON.parse(kayitliKullanici);
             setKullaniciAdi(userObj.fullName);
         } else {
-            navigate('/'); // Giriş yoksa Login'e at
+            navigate('/');
         }
     }, [navigate]);
 
-    // Ders Programı Verisini Yükle
+    // Veri Yükleme
     useEffect(() => {
         const kayitliVeri = localStorage.getItem("reactDersProgrami");
         if (kayitliVeri) {
@@ -72,70 +63,99 @@ function DersProgrami() {
         }
     }, []);
 
-    // Çıkış Yapma Fonksiyonu
-    const cikisYap = () => {
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
-        navigate('/');
-    };
-
-    // --- MANTIK FONKSİYONLARI ---
-
-    const kuralKontrol = (dersId, row, col, miktar) => {
+    // --- KURAL KONTROL ---
+    const kuralKontrol = (dersId, col, miktar) => {
         const kural = DERS_KURALLARI[dersId];
-        if (kural.izinliZamanlar && kural.izinliZamanlar[col]) {
-            if (!kural.izinliZamanlar[col].includes(row)) return "Bu saate koyulamaz!";
-            if (miktar > 1 && !kural.izinliZamanlar[col].includes(row + 1)) return "Blok ders yasaklı saate taşıyor!";
+        if (kural.gunlukMax) {
+            let bugunDersSayisi = 0;
+            Object.keys(yerlesim).forEach(key => {
+                const [c, r] = key.split('-').map(Number);
+                if (c === col && yerlesim[key].dersId === dersId) {
+                    bugunDersSayisi++;
+                }
+            });
+
+            if (bugunDersSayisi + miktar > kural.gunlukMax) {
+                return `Bu ders için günlük limit (${kural.gunlukMax} saat) aşıldı!`;
+            }
         }
-
-        let bugunDersSayisi = 0;
-        Object.keys(yerlesim).forEach(key => {
-            const [c, r] = key.split('-').map(Number);
-            if (c === col && yerlesim[key].dersId === dersId) bugunDersSayisi++;
-        });
-
-        if (bugunDersSayisi + miktar > kural.gunlukMax) return "Günlük limit aşıldı!";
         return null;
     };
 
-    const handleDragStart = (e, dersId) => {
-        if (stoklar[dersId] > 0) e.dataTransfer.setData("dersId", dersId);
-        else e.preventDefault();
+    // --- FONKSİYONLAR ---
+
+    const handleDersTikla = (id) => {
+        if (stoklar[id] <= 0) return;
+        setSeciliDersId(id);
+        setSecilenZaman(null);
     };
 
-    const handleDrop = (e, row, col) => {
-        e.preventDefault();
-        const dersId = e.dataTransfer.getData("dersId");
-        if (!dersId || stoklar[dersId] <= 0) return;
+    const saatSeciminiOnayla = () => {
+        if (!secilenZaman) return alert("Lütfen bir saat seçin!");
 
-        // Hafta sonu ve öğle arası engeli
-        if (col >= 5) return alert("Hafta sonuna ders koyulamaz!");
-        if (row === OGLE_ARASI_HARITASI[col + 1]) return alert("Öğle arasına koyulamaz!");
-
+        const { col, row } = secilenZaman;
+        const dersId = seciliDersId;
         const kural = DERS_KURALLARI[dersId];
         const blokMu = kural.blok && stoklar[dersId] >= 2;
-        const islenecekMiktar = blokMu ? 2 : 1;
+        const miktar = blokMu ? 2 : 1;
 
-        // Doluluk kontrolü
-        if (yerlesim[`${col}-${row}`]) return alert("Bu hücre dolu!");
-
+        if (yerlesim[`${col}-${row}`]) return alert("Bu saat zaten dolu!");
         if (blokMu) {
-            if (row >= SAATLER.length - 1) return alert("Blok ders sığmaz!");
-            if (yerlesim[`${col}-${row + 1}`]) return alert("Alt hücre dolu!");
-            if (row + 1 === OGLE_ARASI_HARITASI[col + 1]) return alert("Öğle arası dersi bölemez!");
+            if (row >= SAATLER.length - 1) return alert("Blok ders tablo dışına taşıyor!");
+            if (yerlesim[`${col}-${row + 1}`]) return alert("Blok ders için alt saat dolu!");
         }
 
-        const hata = kuralKontrol(dersId, row, col, islenecekMiktar);
+        const hata = kuralKontrol(dersId, col, miktar);
         if (hata) return alert(hata);
 
-        // Yerleştirme
         const yeniYerlesim = { ...yerlesim };
         const grupId = Date.now();
         yeniYerlesim[`${col}-${row}`] = { dersId, grupId };
         if (blokMu) yeniYerlesim[`${col}-${row + 1}`] = { dersId, grupId };
 
         setYerlesim(yeniYerlesim);
-        setStoklar(prev => ({ ...prev, [dersId]: prev[dersId] - islenecekMiktar }));
+        setStoklar(prev => ({ ...prev, [dersId]: prev[dersId] - miktar }));
+        setSeciliDersId(null);
+    };
+
+    const getSaatOpsiyonlari = (dersId) => {
+        const opsiyonlar = [];
+        const kural = DERS_KURALLARI[dersId];
+        const blokMu = kural.blok && stoklar[dersId] >= 2;
+        GUNLER.forEach((gun, colIndex) => {
+            if (colIndex >= 5) return;
+
+            SAATLER.forEach((saat, rowIndex) => {
+
+                // 2. İzinli Zamanlar Kontrolü
+                if (kural.izinliZamanlar) {
+                    // Gün kontrolü
+                    if (!kural.izinliZamanlar[colIndex]) return;
+
+                    // Saat kontrolü (Başlangıç saati)
+                    if (!kural.izinliZamanlar[colIndex].includes(rowIndex)) return;
+
+                    // --- YENİ EKLENEN KISIM: Blok ders ise 2. saat de izinli mi? ---
+                    if (blokMu) {
+                        const ikinciSaatRow = rowIndex + 1;
+                        // Eğer ikinci saat listede yoksa bu seçeneği gösterme!
+                        if (!kural.izinliZamanlar[colIndex].includes(ikinciSaatRow)) return;
+                    }
+                }
+
+                // 3. Blok dersin tablo dışına 
+                if (blokMu) {
+                    if (rowIndex >= SAATLER.length - 1) return; // Tablo sonuna sığmaz
+                }
+
+                opsiyonlar.push({
+                    etiket: `${gun} ${saat}`,
+                    col: colIndex,
+                    row: rowIndex
+                });
+            });
+        });
+        return opsiyonlar;
     };
 
     const handleDersSil = (key, dersId, grupId) => {
@@ -151,7 +171,6 @@ function DersProgrami() {
         setStoklar(prev => ({ ...prev, [dersId]: prev[dersId] + iadeMiktari }));
     };
 
-    // Buton İşlevleri
     const kaydet = () => {
         localStorage.setItem("reactDersProgrami", JSON.stringify({ yerlesim, stoklar }));
         alert("Kaydedildi!");
@@ -164,15 +183,11 @@ function DersProgrami() {
         }
     };
     const indir = () => {
-        const siraliYerlesim = Object.keys(yerlesim)
-            .sort()
-            .reduce((obj, key) => {
-                obj[key] = yerlesim[key];
-                return obj;
-            }, {});
-
-        const dataToExport = { yerlesim: siraliYerlesim, stoklar };
-        const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: "application/json" });
+        const siraliYerlesim = Object.keys(yerlesim).sort().reduce((obj, key) => {
+            obj[key] = yerlesim[key];
+            return obj;
+        }, {});
+        const blob = new Blob([JSON.stringify({ yerlesim: siraliYerlesim, stoklar }, null, 2)], { type: "application/json" });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
         a.download = "ders_programi.json";
@@ -192,21 +207,19 @@ function DersProgrami() {
         reader.readAsText(file);
     };
 
-    // --- HTML (JSX) GÖRÜNÜMÜ ---
+
     return (
         <div className="ana-ekran">
             {/* SOL PANEL */}
             <div className="sol-panel">
                 <h3>Dersler</h3>
-                <small style={{ color: '#bbb', marginBottom: '20px' }}>Blok Dersler: B</small>
-
+                <small style={{ color: '#bbb', marginBottom: '20px', fontSize: '12px' }}>Ders eklemek için tıklayın</small>
                 {Object.entries(DERS_TANIMLARI).map(([id, ders]) => (
                     <div
                         key={id}
                         className={`ders-kutusu ${stoklar[id] <= 0 ? 'stok-bitti' : ''}`}
-                        style={{ backgroundColor: ders.renk }}
-                        draggable={stoklar[id] > 0}
-                        onDragStart={(e) => handleDragStart(e, id)}
+                        style={{ backgroundColor: ders.renk, cursor: 'pointer' }}
+                        onClick={() => handleDersTikla(id)}
                     >
                         <span>{ders.ad} {ders.blok && <span className="blok-ikon">B</span>}</span>
                         <span>({stoklar[id]})</span>
@@ -222,30 +235,9 @@ function DersProgrami() {
                 <input type="file" ref={dosyaInputRef} style={{ display: 'none' }} accept=".json" onChange={yukle} />
             </div>
 
-            {/* SAĞ PANEL (TABLO) */}
+            {/* SAĞ PANEL */}
             <div className="sag-sahne">
 
-                {/* --- SAĞ ÜST KUTUCUK --- */}
-                <div className="user-box">
-                    <div className="avatar">
-                        {kullaniciAdi ? kullaniciAdi.charAt(0).toUpperCase() : '?'}
-                    </div>
-                    <div className="user-info">
-                        <span className="user-name">{kullaniciAdi}</span>
-                        {/* Aşağı ok simgesi ekledik */}
-                        <span className="user-role" style={{ fontSize: '10px' }}>Öğrenci ▼</span>
-                    </div>
-
-                    {/* --- GİZLİ MENÜ (HOVER İLE AÇILIR) --- */}
-                    <div className="dropdown-menu">
-                        <button onClick={() => navigate('/profil')} className="dropdown-item">
-                            👤 Profilim
-                        </button>
-                        <button onClick={cikisYap} className="dropdown-item" style={{ color: '#dc3545' }}>
-                            🚪 Çıkış Yap
-                        </button>
-                    </div>
-                </div>
 
                 <h2 style={{ color: '#2c3e50', marginTop: '50px' }}>Haftalık Ders Programı</h2>
 
@@ -259,27 +251,16 @@ function DersProgrami() {
                     <tbody>
                         {SAATLER.map((saat, row) => (
                             <tr key={row}>
-                                <td className="baslik-hucre" style={{ fontSize: '15px', fontWeight: 'bold' }}>{saat}</td>
+                                <td className="baslik-hucre" style={{ fontWeight: 'bold' }}>{saat}</td>
                                 {GUNLER.map((_, col) => {
-                                    // Hücre İçeriği Hesaplama
-                                    const ogleSaati = OGLE_ARASI_HARITASI[col + 1];
-                                    if (row === ogleSaati) return <td key={col} className="ogle-arasi">ÖĞLE ARASI</td>;
-                                    if (col >= 5) return <td key={col} className="kapali-alan">TATİL</td>;
 
                                     const key = `${col}-${row}`;
                                     const dersVerisi = yerlesim[key];
 
                                     return (
-                                        <td
-                                            key={col}
-                                            onDragOver={(e) => e.preventDefault()}
-                                            onDrop={(e) => handleDrop(e, row, col)}
-                                        >
+                                        <td key={col}>
                                             {dersVerisi && (
-                                                <div
-                                                    className="yerlesmis-ders"
-                                                    onDoubleClick={() => handleDersSil(key, dersVerisi.dersId, dersVerisi.grupId)}
-                                                >
+                                                <div className="yerlesmis-ders" onDoubleClick={() => handleDersSil(key, dersVerisi.dersId, dersVerisi.grupId)}>
                                                     {DERS_TANIMLARI[dersVerisi.dersId]?.ad}
                                                 </div>
                                             )}
@@ -291,16 +272,39 @@ function DersProgrami() {
                     </tbody>
                 </table>
                 <div className="bilgi-notu">
-                    * Blok dersler koyulurken koyduğunuz saate ve sonraki saate birlikte koyulur. <br />
-                    * Hafta içi cuma günleri 13.00-14.00 arası diğer günler 12.00-13.00 arası öğle tatilidir.<br />
-                    * Beden Eğitimi sadece Cuma (Öğleden sonra).<br />
-                    * Yükleme yaparken mevcut tablo silinir ve dosyadaki veri yazılır.
+                    * Eklemek için soldaki derse tıklayın ve saati seçin.<br />
+                    * Silmek için tablodaki derse çift tıklayın.<br />
                 </div>
             </div>
+
+            {/* SEÇİM EKRANI */}
+            {seciliDersId && (
+                <div className="modal-overlay">
+                    <div className="modal-icerik">
+                        <h3>{DERS_TANIMLARI[seciliDersId].ad} İçin Saat Seç</h3>
+                        <div className="saat-opsiyon-listesi" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                            {getSaatOpsiyonlari(seciliDersId).length > 0 ? (
+                                getSaatOpsiyonlari(seciliDersId).map((opt, index) => (
+                                    <label key={index} className="saat-radyo">
+                                        <input
+                                            type="radio"
+                                            name="zaman-secimi"
+                                            onChange={() => setSecilenZaman({ col: opt.col, row: opt.row })}
+                                        />
+                                        {opt.etiket}
+                                    </label>
+                                ))
+                            ) : (
+                                <p style={{ color: 'red' }}>Bu ders için uygun saat kalmadı veya kural kısıtlaması var.</p>
+                            )}
+                        </div>
+                        <button className="btn-sec" onClick={saatSeciminiOnayla}>Seç ve Programa Ekle</button>
+                        <button className="btn-iptal" onClick={() => setSeciliDersId(null)}>İptal</button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
-
-
 
 export default DersProgrami;

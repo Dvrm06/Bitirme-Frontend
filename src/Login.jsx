@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './App.css'; // Stiller artık buradan geliyor
+import './App.css';
 
 const Login = () => {
     const [formData, setFormData] = useState({
@@ -42,7 +42,7 @@ const Login = () => {
             localStorage.setItem('token', data.data.accessToken);
             localStorage.setItem('user', JSON.stringify(data.data));
 
-            navigate('/ders-programi');
+            navigate('/anasayfa');
 
         } catch (err) {
             setError(err.message);
@@ -50,14 +50,14 @@ const Login = () => {
     };
 
     return (
-        <div className="container"> {/* style={styles.container} yerine className */}
+        <div className="container">
             <div className="card">
                 <h2 className="title">Öğrenci Girişi</h2>
 
                 {error && <div className="error">{error}</div>}
 
                 <form onSubmit={handleSubmit}>
-                    <div className="input-group"> {/* inputGroup -> input-group oldu */}
+                    <div className="input-group">
                         <label>Kullanıcı Adı veya Email</label>
                         <input
                             type="text"
