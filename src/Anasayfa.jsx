@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import html2canvas from 'html2canvas'; // Kütüphaneyi import ettik
+import html2canvas from 'html2canvas';
 import './App.css';
 
-// Sabitler (Aynı kalmalı)
+// Sabitler (
 const GUNLER = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
 const SAATLER = ["09.00-10.00", "10.00-11.00", "11.00-12.00", "12.00-13.00", "13.00-14.00", "14.00-15.00", "15.00-16.00", "16.00-17.00"];
 const DERS_TANIMLARI = {

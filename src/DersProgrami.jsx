@@ -135,7 +135,7 @@ function DersProgrami() {
                     // Saat kontrolü (Başlangıç saati)
                     if (!kural.izinliZamanlar[colIndex].includes(rowIndex)) return;
 
-                    // --- YENİ EKLENEN KISIM: Blok ders ise 2. saat de izinli mi? ---
+                    // Blok ders ise 2. saat de izinli mi? ---
                     if (blokMu) {
                         const ikinciSaatRow = rowIndex + 1;
                         // Eğer ikinci saat listede yoksa bu seçeneği gösterme!
@@ -145,7 +145,7 @@ function DersProgrami() {
 
                 // 3. Blok dersin tablo dışına 
                 if (blokMu) {
-                    if (rowIndex >= SAATLER.length - 1) return; // Tablo sonuna sığmaz
+                    if (rowIndex >= SAATLER.length - 1) return;
                 }
 
                 opsiyonlar.push({
