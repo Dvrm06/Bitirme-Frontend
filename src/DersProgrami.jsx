@@ -1,305 +1,194 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from './api';
 import './App.css';
 
-// --- SABİT VERİLER VE AYARLAR ---
 const GUNLER = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
-const SAATLER = ["09.00-10.00", "10.00-11.00", "11.00-12.00", "12.00-13.00", "13.00-14.00", "14.00-15.00", "15.00-16.00", "16.00-17.00"];
-
-const BASLANGIC_STOKLARI = {
-    "mat": 4, "fiz": 3, "ing": 2, "edb": 3, "tarih": 2, "resim": 2,
-};
-
-const DERS_TANIMLARI = {
-    "edb": { ad: "Edebiyat", renk: "#e74c3c", blok: true },
-    "mat": { ad: "Matematik", renk: "#e74c3c", blok: true },
-    "fiz": { ad: "Fizik", renk: "#e74c3c", blok: true },
-    "ing": { ad: "İngilizce", renk: "#e74c3c", blok: true },
-    "tarih": { ad: "Tarih", renk: "#e74c3c", blok: true },
-    "resim": { ad: "Resim", renk: "#8e44ad", blok: false },
-};
-
-const DERS_KURALLARI = {
-    "mat": { blok: true, gunlukMax: 2, izinliZamanlar: { 1: [1, 0], 2: [4, 5] } },
-    "fiz": { blok: true, gunlukMax: 2, izinliZamanlar: { 1: [2], 3: [1, 0] } },
-    "ing": { blok: true, gunlukMax: 2, izinliZamanlar: { 3: [5, 4] } },
-    "edb": { blok: true, gunlukMax: 3, izinliZamanlar: { 1: [4, 5, 6] } },
-    "tarih": { blok: true, gunlukMax: 2, izinliZamanlar: { 2: [1, 2] } },
-    "resim": { blok: false, gunlukMax: 2, izinliZamanlar: { 2: [0], 3: [2, 6] } }
+const SAAT_DILIMLERI = {
+    "00:00:00": "09.00-10.00", "01:00:00": "10.00-11.00", "02:00:00": "11.00-12.00",
+    "03:00:00": "12.00-13.00", "04:00:00": "13.00-14.00", "05:00:00": "14.00-15.00",
+    "06:00:00": "15.00-16.00", "07:00:00": "16.00-17.00"
 };
 
 function DersProgrami() {
-    const [kullaniciAdi, setKullaniciAdi] = useState('');
     const navigate = useNavigate();
-    const [stoklar, setStoklar] = useState(BASLANGIC_STOKLARI);
-    const [yerlesim, setYerlesim] = useState({});
+    const [dersler, setDersler] = useState([]);
+    const [yukleniyor, setYukleniyor] = useState(true);
+    const [hata, setHata] = useState('');
 
-    // STATE'LER
-    const [seciliDersId, setSeciliDersId] = useState(null);
-    const [secilenZaman, setSecilenZaman] = useState(null);
+    const [modalAcik, setModalAcik] = useState(false);
+    const [seciliDers, setSeciliDers] = useState(null);
+    const [seciliDersGruplari, setSeciliDersGruplari] = useState([]);
+    const [gruplarYukleniyor, setGruplarYukleniyor] = useState(false);
 
-    const dosyaInputRef = useRef(null);
-
-    // Kullanıcı Kontrolü
     useEffect(() => {
-        const kayitliKullanici = localStorage.getItem('user');
-        if (kayitliKullanici) {
-            const userObj = JSON.parse(kayitliKullanici);
-            setKullaniciAdi(userObj.fullName);
-        } else {
-            navigate('/');
-        }
-    }, [navigate]);
-
-    // Veri Yükleme
-    useEffect(() => {
-        const kayitliVeri = localStorage.getItem("reactDersProgrami");
-        if (kayitliVeri) {
+        const dersleriGetir = async () => {
             try {
-                const parsed = JSON.parse(kayitliVeri);
-                setYerlesim(parsed.yerlesim || {});
-                setStoklar(parsed.stoklar || BASLANGIC_STOKLARI);
-            } catch (e) { console.error("Veri hatası"); }
-        }
+                const response = await api.get('/lessons');
+                if (response.data && response.data.status) {
+                    setDersler(response.data.data);
+                }
+                setYukleniyor(false);
+            } catch (error) {
+                console.error("Dersler çekilirken hata:", error);
+                setHata("Ders listesi yüklenemedi. Lütfen bağlantınızı kontrol edin.");
+                setYukleniyor(false);
+            }
+        };
+        dersleriGetir();
     }, []);
 
-    // --- KURAL KONTROL ---
-    const kuralKontrol = (dersId, col, miktar) => {
-        const kural = DERS_KURALLARI[dersId];
-        if (kural.gunlukMax) {
-            let bugunDersSayisi = 0;
-            Object.keys(yerlesim).forEach(key => {
-                const [c, r] = key.split('-').map(Number);
-                if (c === col && yerlesim[key].dersId === dersId) {
-                    bugunDersSayisi++;
-                }
+    const handleDersTikla = async (ders) => {
+        setSeciliDers(ders);
+        setModalAcik(true);
+        setGruplarYukleniyor(true);
+        setSeciliDersGruplari([]);
+
+        try {
+            const response = await api.get(`/lessonGroups?lessonID=${ders.lessonID}`);
+            if (response.data && response.data.status) {
+                setSeciliDersGruplari(response.data.data);
+            }
+            setGruplarYukleniyor(false);
+        } catch (error) {
+            console.error("Gruplar çekilirken hata:", error);
+            setGruplarYukleniyor(false);
+        }
+    };
+
+    const derseKayitOl = async (grup) => {
+        try {
+            // Hileli hafızamızı çekiyoruz
+            let benimDerslerim = JSON.parse(localStorage.getItem('benimDerslerim') || '[]');
+
+            // Eğer eski formatta (sadece sayı ID) kaldıysa temizleyip yeni formata geçelim
+            if (benimDerslerim.length > 0 && typeof benimDerslerim[0] === 'number') {
+                benimDerslerim = [];
+                localStorage.removeItem('benimDerslerim');
+            }
+
+            // Gruptan "Tek Grup", "Grup 1" gibi temel adı koparıyoruz
+            const temelGrupAdi = grup.lessonGroupName.split(' (')[0];
+
+            // AYNI DERSİN BAŞKA BİR GRUBU SEÇİLMİŞ Mİ KONTROLÜ
+            const baskaGrupVarMi = benimDerslerim.find(
+                d => d.lessonID === seciliDers.lessonID && d.temelGrupAdi !== temelGrupAdi
+            );
+
+            if (baskaGrupVarMi) {
+                alert(`HATA: Bu dersin zaten "${baskaGrupVarMi.temelGrupAdi}" isimli şubesine kayıtlısınız! Başka grup seçemezsiniz.`);
+                return;
+            }
+
+            const response = await api.post('/lessonGroups/register', {
+                lessonGroupID: grup.lessonGroupID
             });
 
-            if (bugunDersSayisi + miktar > kural.gunlukMax) {
-                return `Bu ders için günlük limit (${kural.gunlukMax} saat) aşıldı!`;
-            }
-        }
-        return null;
-    };
-
-    // --- FONKSİYONLAR ---
-
-    const handleDersTikla = (id) => {
-        if (stoklar[id] <= 0) return;
-        setSeciliDersId(id);
-        setSecilenZaman(null);
-    };
-
-    const saatSeciminiOnayla = () => {
-        if (!secilenZaman) return alert("Lütfen bir saat seçin!");
-
-        const { col, row } = secilenZaman;
-        const dersId = seciliDersId;
-        const kural = DERS_KURALLARI[dersId];
-        const blokMu = kural.blok && stoklar[dersId] >= 2;
-        const miktar = blokMu ? 2 : 1;
-
-        if (yerlesim[`${col}-${row}`]) return alert("Bu saat zaten dolu!");
-        if (blokMu) {
-            if (row >= SAATLER.length - 1) return alert("Blok ders tablo dışına taşıyor!");
-            if (yerlesim[`${col}-${row + 1}`]) return alert("Blok ders için alt saat dolu!");
-        }
-
-        const hata = kuralKontrol(dersId, col, miktar);
-        if (hata) return alert(hata);
-
-        const yeniYerlesim = { ...yerlesim };
-        const grupId = Date.now();
-        yeniYerlesim[`${col}-${row}`] = { dersId, grupId };
-        if (blokMu) yeniYerlesim[`${col}-${row + 1}`] = { dersId, grupId };
-
-        setYerlesim(yeniYerlesim);
-        setStoklar(prev => ({ ...prev, [dersId]: prev[dersId] - miktar }));
-        setSeciliDersId(null);
-    };
-
-    const getSaatOpsiyonlari = (dersId) => {
-        const opsiyonlar = [];
-        const kural = DERS_KURALLARI[dersId];
-        const blokMu = kural.blok && stoklar[dersId] >= 2;
-        GUNLER.forEach((gun, colIndex) => {
-            if (colIndex >= 5) return;
-
-            SAATLER.forEach((saat, rowIndex) => {
-
-                // 2. İzinli Zamanlar Kontrolü
-                if (kural.izinliZamanlar) {
-                    // Gün kontrolü
-                    if (!kural.izinliZamanlar[colIndex]) return;
-
-                    // Saat kontrolü (Başlangıç saati)
-                    if (!kural.izinliZamanlar[colIndex].includes(rowIndex)) return;
-
-                    // Blok ders ise 2. saat de izinli mi? ---
-                    if (blokMu) {
-                        const ikinciSaatRow = rowIndex + 1;
-                        // Eğer ikinci saat listede yoksa bu seçeneği gösterme!
-                        if (!kural.izinliZamanlar[colIndex].includes(ikinciSaatRow)) return;
-                    }
-                }
-
-                // 3. Blok dersin tablo dışına 
-                if (blokMu) {
-                    if (rowIndex >= SAATLER.length - 1) return;
-                }
-
-                opsiyonlar.push({
-                    etiket: `${gun} ${saat}`,
-                    col: colIndex,
-                    row: rowIndex
+            if (response.data && response.data.status) {
+                // Sadece ID değil, dersin kime ait olduğunu da kaydediyoruz
+                benimDerslerim.push({
+                    lessonGroupID: grup.lessonGroupID,
+                    lessonID: seciliDers.lessonID,
+                    temelGrupAdi: temelGrupAdi
                 });
-            });
-        });
-        return opsiyonlar;
-    };
+                localStorage.setItem('benimDerslerim', JSON.stringify(benimDerslerim));
 
-    const handleDersSil = (key, dersId, grupId) => {
-        const yeniYerlesim = { ...yerlesim };
-        let iadeMiktari = 0;
-        Object.keys(yeniYerlesim).forEach(k => {
-            if (yeniYerlesim[k].grupId === grupId) {
-                delete yeniYerlesim[k];
-                iadeMiktari++;
+                alert("Saati başarıyla seçtiniz! Kalan saatleri de seçebilirsiniz.");
+
+                // Seçilen saati ekrandan anında yok etmek için modal listesinden çıkarıyoruz
+                setSeciliDersGruplari(prev => prev.filter(g => g.lessonGroupID !== grup.lessonGroupID));
             }
-        });
-        setYerlesim(yeniYerlesim);
-        setStoklar(prev => ({ ...prev, [dersId]: prev[dersId] + iadeMiktari }));
-    };
-
-    const kaydet = () => {
-        localStorage.setItem("reactDersProgrami", JSON.stringify({ yerlesim, stoklar }));
-        alert("Kaydedildi!");
-    };
-    const temizle = () => {
-        if (confirm("Her şey silinecek?")) {
-            setYerlesim({});
-            setStoklar(BASLANGIC_STOKLARI);
-            localStorage.removeItem("reactDersProgrami");
+        } catch (error) {
+            const mesaj = error.response?.data?.message || "Kayıt olurken bir hata oluştu veya zaten kayıtlısınız.";
+            alert(mesaj);
         }
     };
-    const indir = () => {
-        const siraliYerlesim = Object.keys(yerlesim).sort().reduce((obj, key) => {
-            obj[key] = yerlesim[key];
-            return obj;
-        }, {});
-        const blob = new Blob([JSON.stringify({ yerlesim: siraliYerlesim, stoklar }, null, 2)], { type: "application/json" });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = "ders_programi.json";
-        a.click();
-    };
-    const yukle = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-            try {
-                const json = JSON.parse(ev.target.result);
-                setYerlesim(json.yerlesim);
-                setStoklar(json.stoklar);
-            } catch (err) { alert("Dosya hatalı"); }
-        };
-        reader.readAsText(file);
-    };
 
+    // Modaldaki Grupları Filtreleme İşlemi (Daha önce seçilmiş olanlar ekranda çıkmaz)
+    let kayitliDersler = [];
+    try { kayitliDersler = JSON.parse(localStorage.getItem('benimDerslerim') || '[]'); } catch (e) { }
+    const kayitliIdler = kayitliDersler.map(d => d.lessonGroupID);
+
+    // Sadece henüz kayıt olunmamış grupları ekranda bırakıyoruz
+    const gosterilecekGruplar = seciliDersGruplari.filter(grup => !kayitliIdler.includes(grup.lessonGroupID));
+
+    if (yukleniyor) return <div className="ana-ekran merkez-ekran"><h2>Dersler Yükleniyor...</h2></div>;
+    if (hata) return <div className="ana-ekran merkez-ekran hata-mesaji"><h2>{hata}</h2></div>;
 
     return (
-        <div className="ana-ekran">
-            {/* SOL PANEL */}
-            <div className="sol-panel">
-                <h3>Dersler</h3>
-                <small style={{ color: '#bbb', marginBottom: '20px', fontSize: '12px' }}>Ders eklemek için tıklayın</small>
-                {Object.entries(DERS_TANIMLARI).map(([id, ders]) => (
-                    <div
-                        key={id}
-                        className={`ders-kutusu ${stoklar[id] <= 0 ? 'stok-bitti' : ''}`}
-                        style={{ backgroundColor: ders.renk, cursor: 'pointer' }}
-                        onClick={() => handleDersTikla(id)}
-                    >
-                        <span>{ders.ad} {ders.blok && <span className="blok-ikon">B</span>}</span>
-                        <span>({stoklar[id]})</span>
-                    </div>
-                ))}
+        <div className="ana-ekran ders-secimi-ekrani">
+            <h2 className="ders-secimi-baslik">Açılan Dersler</h2>
+            <p className="ders-secimi-aciklama">Alt gruplarını ve gün/saat detaylarını görmek istediğiniz dersin üzerine tıklayın.</p>
 
-                <div className="buton-grubu">
-                    <button className="btn btn-kaydet" onClick={kaydet}>Kaydet</button>
-                    <button className="btn btn-indir" onClick={indir}>İndir</button>
-                    <button className="btn btn-yukle" onClick={() => dosyaInputRef.current.click()}>Yükle</button>
-                    <button className="btn btn-temizle" onClick={temizle}>Sıfırla</button>
-                </div>
-                <input type="file" ref={dosyaInputRef} style={{ display: 'none' }} accept=".json" onChange={yukle} />
-            </div>
-
-            {/* SAĞ PANEL */}
-            <div className="sag-sahne">
-
-
-                <h2 style={{ color: '#2c3e50', marginTop: '50px' }}>Haftalık Ders Programı</h2>
-
-                <table>
-                    <thead>
-                        <tr>
-                            <th className="baslik-hucre">Saat/Gün</th>
-                            {GUNLER.map(g => <th key={g} className="baslik-hucre">{g}</th>)}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {SAATLER.map((saat, row) => (
-                            <tr key={row}>
-                                <td className="baslik-hucre" style={{ fontWeight: 'bold' }}>{saat}</td>
-                                {GUNLER.map((_, col) => {
-
-                                    const key = `${col}-${row}`;
-                                    const dersVerisi = yerlesim[key];
-
-                                    return (
-                                        <td key={col}>
-                                            {dersVerisi && (
-                                                <div className="yerlesmis-ders" onDoubleClick={() => handleDersSil(key, dersVerisi.dersId, dersVerisi.grupId)}>
-                                                    {DERS_TANIMLARI[dersVerisi.dersId]?.ad}
-                                                </div>
-                                            )}
-                                        </td>
-                                    );
-                                })}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-                <div className="bilgi-notu">
-                    * Eklemek için soldaki derse tıklayın ve saati seçin.<br />
-                    * Silmek için tablodaki derse çift tıklayın.<br />
-                </div>
-            </div>
-
-            {/* SEÇİM EKRANI */}
-            {seciliDersId && (
-                <div className="modal-overlay">
-                    <div className="modal-icerik">
-                        <h3>{DERS_TANIMLARI[seciliDersId].ad} İçin Saat Seç</h3>
-                        <div className="saat-opsiyon-listesi" style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                            {getSaatOpsiyonlari(seciliDersId).length > 0 ? (
-                                getSaatOpsiyonlari(seciliDersId).map((opt, index) => (
-                                    <label key={index} className="saat-radyo">
-                                        <input
-                                            type="radio"
-                                            name="zaman-secimi"
-                                            onChange={() => setSecilenZaman({ col: opt.col, row: opt.row })}
-                                        />
-                                        {opt.etiket}
-                                    </label>
-                                ))
-                            ) : (
-                                <p style={{ color: 'red' }}>Bu ders için uygun saat kalmadı veya kural kısıtlaması var.</p>
-                            )}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'center', maxWidth: '1000px' }}>
+                {dersler.length > 0 ? (
+                    dersler.map((ders) => (
+                        <div
+                            key={ders.lessonID}
+                            onClick={() => handleDersTikla(ders)}
+                            style={{
+                                backgroundColor: 'white', padding: '25px', borderRadius: '12px',
+                                boxShadow: '0 4px 10px rgba(0,0,0,0.1)', cursor: 'pointer',
+                                width: '250px', textAlign: 'center', borderTop: '6px solid #3498db',
+                                transition: 'transform 0.2s',
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
+                            onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                        >
+                            <h3 style={{ margin: '0 0 10px 0', color: '#2c3e50' }}>{ders.lessonName}</h3>
+                            <p style={{ margin: '0', fontSize: '13px', color: '#7f8c8d' }}>Bölüm: {ders.departmentName || '-'}</p>
+                            <p style={{ margin: '5px 0 0 0', fontSize: '13px', color: '#7f8c8d', fontWeight: 'bold' }}>{ders.semesterNo}. Dönem</p>
                         </div>
-                        <button className="btn-sec" onClick={saatSeciminiOnayla}>Seç ve Programa Ekle</button>
-                        <button className="btn-iptal" onClick={() => setSeciliDersId(null)}>İptal</button>
+                    ))
+                ) : (<p style={{ color: '#888' }}>Sistemde kayıtlı ana ders bulunmuyor.</p>)}
+            </div>
+
+            {modalAcik && (
+                <div className="modal-overlay" onClick={() => setModalAcik(false)}>
+                    <div className="modal-icerik" style={{ width: '700px', maxWidth: '90%' }} onClick={e => e.stopPropagation()}>
+                        <h3 style={{ marginTop: '0', color: '#2c3e50', borderBottom: '2px solid #ecf0f1', paddingBottom: '10px' }}>
+                            {seciliDers?.lessonName} - Grup Seçimi
+                        </h3>
+
+                        {gruplarYukleniyor ? (<p style={{ padding: '20px 0' }}>Gruplar aranıyor...</p>
+                        ) : gosterilecekGruplar.length > 0 ? (
+                            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                                <table className="ders-tablosu" style={{ marginTop: '15px', width: '100%' }}>
+                                    <thead>
+                                        <tr>
+                                            <th className="baslik-hucre">Grup Adı</th>
+                                            <th className="baslik-hucre">Gün</th>
+                                            <th className="baslik-hucre">Saat</th>
+                                            <th className="baslik-hucre">İşlem</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {gosterilecekGruplar.map(grup => (
+                                            <tr key={grup.lessonGroupID}>
+                                                <td style={{ fontWeight: 'bold', padding: '10px' }}>{grup.lessonGroupName}</td>
+                                                <td style={{ padding: '10px' }}>{grup.day !== null ? GUNLER[grup.day] : '-'}</td>
+                                                <td style={{ padding: '10px' }}>{grup.hour ? SAAT_DILIMLERI[grup.hour] : '-'}</td>
+                                                <td style={{ padding: '10px' }}>
+                                                    <button className="btn-kayit-ol" onClick={() => derseKayitOl(grup)}>
+                                                        Seç ve Kaydol
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <p style={{ color: '#27ae60', margin: '30px 0', fontWeight: 'bold' }}>
+                                ✓ Bu derse ait tüm uygun saatleri seçtiniz veya boş kontenjan kalmadı.
+                            </p>
+                        )}
+
+                        <div style={{ marginTop: '20px', textAlign: 'right' }}>
+                            <button onClick={() => setModalAcik(false)} style={{ padding: '10px 20px', backgroundColor: '#95a5a6', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>
+                                Kapat
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

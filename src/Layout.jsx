@@ -20,14 +20,7 @@ const Layout = () => {
 
     // Menü Aç/Kapa Mantığı 
     const toggleMenu = () => {
-        if (menuAcik) {
-            setMenuAcik(false);
-        } else {
-            setMenuAcik(true);
-            setTimeout(() => {
-                setMenuAcik(false);
-            }, 5000);
-        }
+        setMenuAcik(!menuAcik); // Açıksa kapatır, kapalıysa açar
     };
 
     // Çıkış Yapma

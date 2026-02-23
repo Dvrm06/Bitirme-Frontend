@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from './api';
 import './App.css';
 
 const Login = () => {
@@ -22,30 +23,27 @@ const Login = () => {
         setError('');
 
         try {
-            const response = await fetch('http://localhost:8001/api/users/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    usernameoremail: formData.username,
-                    password: formData.password
-                }),
+            // api.js'de base URL'i verdiğimiz için sadece endpoint'i yazıyoruz
+            const response = await api.post('/users/login', {
+                usernameoremail: formData.username,
+                password: formData.password
             });
 
-            const data = await response.json();
+            // Axios ile veri direkt response.data içinde gelir
+            const data = response.data;
 
-            if (!response.ok) {
-                throw new Error(data.message || 'Giriş başarısız oldu');
-            }
-
+            // Token ve kullanıcı bilgilerini kaydediyoruz
             localStorage.setItem('token', data.data.accessToken);
             localStorage.setItem('user', JSON.stringify(data.data));
 
+            // Başarılı girişte anasayfaya yönlendiriyoruz
             navigate('/anasayfa');
 
         } catch (err) {
-            setError(err.message);
+            // Axios'ta hata mesajları err.response.data içinde döner
+            // Eğer back-end'den özel bir mesaj gelmezse varsayılan mesajı gösteririz
+            const errorMessage = err.response?.data?.message || 'Giriş başarısız oldu, bilgilerinizi kontrol edin.';
+            setError(errorMessage);
         }
     };
 

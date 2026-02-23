@@ -58,8 +58,9 @@ table {
   box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
   margin-top: 20px;
   width: 85%;
-  /* Ekrana yayıl */
   max-width: 1400px;
+
+  table-layout: fixed;
 }
 
 td,
@@ -72,6 +73,30 @@ th {
   font-size: 16px;
   position: relative;
   padding: 0;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* DERS KUTULARI  */
+.yerlesmis-ders {
+  width: calc(100% - 4px);
+  height: calc(100% - 4px);
+  margin: 2px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  cursor: pointer;
+  background-color: #3498db;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 4px;
+
+
+  white-space: normal;
+  overflow: hidden;
 }
 
 .baslik-hucre {
@@ -113,19 +138,6 @@ th {
   align-items: center;
   justify-content: center;
   margin-left: 5px;
-}
-
-.yerlesmis-ders {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  cursor: pointer;
-  background-color: #3498db;
-  font-size: 15px;
-  font-weight: 600;
 }
 
 .yerlesmis-ders:hover {
@@ -665,4 +677,96 @@ th {
 
 .btn-jpg-indir:active {
   transform: translateY(0);
+}
+
+/* --- DERS SEÇİM EKRANI STİLLERİ --- */
+.ders-secimi-ekrani {
+  flex-direction: column;
+  padding: 40px;
+  overflow-y: auto;
+  align-items: center;
+  /* Tabloyu ortalamak için eklendi */
+}
+
+.merkez-ekran {
+  justify-content: center;
+  align-items: center;
+}
+
+.hata-mesaji {
+  color: #c0392b;
+  /* Koyu kırmızı hata rengi */
+}
+
+.ders-secimi-baslik {
+  color: #2c3e50;
+  margin-bottom: 20px;
+}
+
+.ders-secimi-aciklama {
+  margin-bottom: 20px;
+  color: #555;
+  text-align: center;
+}
+
+.ders-tablosu {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0;
+}
+
+/* Tablo Sütun Genişlikleri */
+.th-grup-adi {
+  width: 20%;
+}
+
+.th-aciklama {
+  width: 30%;
+}
+
+.th-gun {
+  width: 15%;
+}
+
+.th-saat {
+  width: 15%;
+}
+
+.th-kontenjan {
+  width: 10%;
+}
+
+.th-islem {
+  width: 10%;
+}
+
+.ders-tablosu td {
+  padding: 10px;
+  color: #1a252f
+}
+
+.td-grup-adi {
+  font-weight: bold;
+}
+
+.td-bos-durum {
+  padding: 20px;
+  color: #888;
+  text-align: center;
+}
+
+.btn-kayit-ol {
+  background-color: #27ae60;
+  color: white;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s ease;
+}
+
+.btn-kayit-ol:hover {
+  background-color: #219653;
+  /* Üzerine gelince hafif koyulaşır */
 }
